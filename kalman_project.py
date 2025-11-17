@@ -9,4 +9,11 @@ import numpy as np
 3. Evaluate accuracy versus a baseline (like a moving average using RMSE)
 4. Validate statistical assumptions using innovation or residual tests
 5. Stretch to handle missing measurements and occasional outliers robustly
+
+Learning goals:
+1. Discrete time kinematics
+2. state space modelling
+3. Matrix calculus lite (Building A, B, H, Q, and R)
+4. Probabalistic reasoning (gaussians, covariance, innovations)
+5. Practical tuning and diagnostics
 '''
