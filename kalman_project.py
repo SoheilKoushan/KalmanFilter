@@ -1,7 +1,10 @@
 # Kalman Filter
 
-import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+from dataclasses import dataclass
+
+np.random.seed(42)
 
 '''
 1. We must simulate a ground truth 2D trajectory and noiosy position measurements
