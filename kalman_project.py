@@ -17,7 +17,7 @@ Learning goals:
 1. Discrete time kinematics
 2. state space modelling
 3. Matrix calculus lite (Building A, B, H, Q, and R)
-4. Probabalistic reasoning (gaussians, covariance, innovations)
+4. Probabilistic reasoning (Gaussians, covariance, innovations)
 5. Practical tuning and diagnostics
 '''
 
@@ -42,7 +42,8 @@ def simulate_truth(cfg: SimConfig):
     x = 0.5 * t**2 + 10*np.sin(0.3*t)
     y = 0.3 * t**2 + 8*np.cos(0.27*t + 0.8)
 
-    vx = np.gradient(x, cfg.dt) # take the numerical derivative of x wrt time, where time steps are evenly spaced by dt.
+    # take the numerical derivative of x wrt time, where time steps are evenly spaced by dt.
+    vx = np.gradient(x, cfg.dt) 
     vy = np.gradient(y, cfg.dt)
 
     X = np.vstack([x, vx, y, vy]).T # shape (n, 4)
