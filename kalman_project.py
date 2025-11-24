@@ -21,6 +21,10 @@ Learning goals:
 5. Practical tuning and diagnostics
 '''
 
+# -----------------------
+# 1) Simulation utilities
+# -----------------------
+
 @dataclass
 class SimConfig:
     dt: float = 0.1
@@ -63,3 +67,39 @@ def simulate_measurements(X, cfg: SimConfig):
     meas[outliers & mask] += noise_out[outliers & mask]
 
     return meas, mask
+
+# -----------------------
+# 2) Kalman Filter
+# -----------------------
+@dataclass
+class KFConfig:
+    dt: float
+    q: float
+    sigma_meas: float
+
+def kf_matrices(cfg: KFConfig):
+    dt = cfg.dt
+    A = np.array([
+        [1, dt, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 0, dt],
+        [0, 0, 0, 1]
+    ], dtype=float)
+
+    # Process noise fort constant-velocity (block diag of 1D form)
+    q = cfg.q
+    Q1 = q * np.array([[dt**4/4, dt**3/2],
+                       [dt**3/2, dt**2]])
+    Q = np.zeros((4, 4))
+    Q[0:2, 0:2] = Q1
+    Q[2:4, 2:4] = Q1
+
+    H = np.array([
+        [1, 0, 0, 0],
+        [0, 0, 1, 0]
+    ], dtype=float)
+
+    R = (cfg.sigma_meas**2) * np.eye(2)
+    return A, Q, H, R
+
+
