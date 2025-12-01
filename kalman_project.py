@@ -152,6 +152,8 @@ class KalmanFilterCV2D:
         # Threshold ~ 9.21 for Chi^2 with dof=2 at 99% (tunable)
         if d2 > 9.21:
             return self.x, self.P, y, S
+        
+        # update and return
         K = self.P @ self.H.T @ np.linalg.inv(S)
         self.x = self.x + K@y
         self.P = (self.I - K@self.H) @ self.P
