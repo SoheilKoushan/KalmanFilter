@@ -74,16 +74,28 @@ def simulate_measurements(X, cfg: SimConfig):
 # -----------------------
 @dataclass
 class KFConfig:
-    dt: float
-    q: float
-    sigma_meas: float
+    dt: float # time step between consecutive states
+    q: float # process noise intensity
+    sigma_meas: float # sd of the measurement noise
 
 def kf_matrices(cfg: KFConfig):
+    '''
+    This function takes that config and builds the four core matrices of a linear KF.
+    A: state transition matrix
+    Q: process noise covariance
+    H: observation matrix
+    R: measurement noise covariance
+
+    state vector: x_k = [x vx y vy]
+    for constant velocity with step dt:
+    x_k+1 = x_k + v.dt
+    v_k+1 =
+    '''
     dt = cfg.dt
     A = np.array([
         [1, dt, 0, 0],
         [0, 1, 0, 0],
-        [0, 0, 0, dt],
+        [0, 0, 1, dt],
         [0, 0, 0, 1]
     ], dtype=float)
 
@@ -103,4 +115,43 @@ def kf_matrices(cfg: KFConfig):
     R = (cfg.sigma_meas**2) * np.eye(2)
     return A, Q, H, R
 
+class KalmanFilterCV2D:
+    def __init__(self, kf_cfg: KFConfig):
+        self.A, self.Q, self.H, self.R = kf_matrices(kf_cfg)
+        self.I = np.eye(4)
+        self.x = None
+        self.P = None
 
+    def init(self, z0, sigma0_pos=0.5, sigma0_vel=5.0):
+        # initialize from first measurement (or zero if missing)
+        if np.any(np.isnan(z0)):
+            self.x = np.array([0, 0, 0, 0], dtype=float)
+        else:
+            self.x = np.array(z0[0], 0, z0[1], 0, dtype=float)
+        self.P = np.diag([sigma0_pos**2, sigma0_vel**2,
+                          sigma0_pos**2, sigma0_vel**2])
+
+    def predict(self):
+        # @ is matrix multiplication
+        x_pred = self.A @ self.x
+        P_pred = self.A @ self.P @ self.A.T + self.Q
+        self.x, self.P = x_pred, P_pred
+        return x_pred, P_pred
+
+    def update(self, z):
+        if np.any(np.isnan(z)):
+            # no measurement - skip update
+            return self.x, self.P, None, None
+        # outlier gating with Mahalanobis distance (simple robustification)
+        y = z - (self.H @ self.x)
+        S = self.H @ self.P @ self.H.T @ self.R
+        d2 = y.T @ np.linalg.inv(S) @ y # NIS (chi^2 with 2 dof)
+
+        # if too large, treat as missing (gate)
+        # Threshold ~ 9.21 for Chi^2 with dof=2 at 99% (tunable)
+        if d2 > 9.21:
+            return self.x, self.P, y, S
+        K = self.P @ self.H.T @ np.linalg.inv(S)
+        self.x = self.x + K@y
+        self.P = (self.I - K@self.H) @ self.P
+        return self.x, self.P, y, S
