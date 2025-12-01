@@ -143,6 +143,7 @@ class KalmanFilterCV2D:
         if np.any(np.isnan(z)):
             # no measurement - skip update
             return self.x, self.P, None, None
+        
         # outlier gating with Mahalanobis distance (simple robustification)
         y = z - (self.H @ self.x)
         S = self.H @ self.P @ self.H.T @ self.R
