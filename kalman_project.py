@@ -72,6 +72,7 @@ def simulate_measurements(X, cfg: SimConfig):
 # -----------------------
 # 2) Kalman Filter
 # -----------------------
+
 @dataclass
 class KFConfig:
     dt: float # time step between consecutive states
