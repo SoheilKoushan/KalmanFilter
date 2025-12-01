@@ -19,6 +19,16 @@ Learning goals:
 3. Matrix calculus lite (Building A, B, H, Q, and R)
 4. Probabilistic reasoning (Gaussians, covariance, innovations)
 5. Practical tuning and diagnostics
+
+
+Steps:
+1) Simulation utilities
+2) Kalman Filter
+3) Baseline: moving average
+4) Experiment
+5) Metrics
+6) Consistency via NIS (innovations)
+7) Visualizations
 '''
 
 # -----------------------
@@ -156,3 +166,57 @@ class KalmanFilterCV2D:
         self.x = self.x + K@y
         self.P = (self.I - K@self.H) @ self.P
         return self.x, self.P, y, S
+
+# -----------------------
+# 3) Baseline: moving average
+# -----------------------
+def moving_average_positions(meas, window=5):
+    out = np.copy(meas)
+    for d in range(2):
+        series = meas[:, d]
+        # forward-fill NaNs for baseline simplicity
+        valid = np.where(~np.isnan(series))[0]
+        if len(valid) == 0:
+            continue
+        last = series[valid[0]]
+        filled = []
+        j = 0
+        for i in range(len(series)):
+            if j < len(valid) and i == valid[j]:
+                last = series[i]
+                j += 1
+            filled.append(last)
+        arr = np.array(filled, dtype=float)
+        # moving average (casual)
+        kernel = np.ones(window) / window
+        arr_ma = np.convolve(arr, kernel, mode='same')
+        out[:, d] = arr_ma
+    return out
+
+# -----------------------
+# 4) Experiment
+# -----------------------
+cfg = SimConfig()
+t, X_true = simulate_truth(cfg)
+Z_meas, mask = simulate_measurements(X_true, cfg)
+
+kf_cfg = KFConfig(dt=cfg.df, q=cfg.q, sigma_meas=cfg.sigma_meas)
+kf = KalmanFilterCV2D(kf_cfg)
+kf.init(Z_meas[0])
+
+X_est, P_est, innov, S_list = [], [], [], []
+
+for k in range(len(t)):
+    kf.predict()
+    xk, Pk, yk, Sk = kf.update(Z_meas[k])
+    X_est.append(kf.x.copy())
+    P_est.append(kf.P.copy())
+    innov.append(yk if yk is not None else np.array([np.nan, np.nan]))
+    S_list.append(Sk)
+
+X_est = np.array(X_est) # (n, 4)
+innov = np.array(innov) # (n, 2)
+
+# Baaseline
+Z_ma = moving_average_positions(Z_meas, window=7)
+
