@@ -220,6 +220,6 @@ for k in range(len(t)):
 X_est = np.array(X_est) # (n, 4)
 innov = np.array(innov) # (n, 2)
 
-# Baaseline
+# Baseline
 Z_ma = moving_average_positions(Z_meas, window=7)
 
