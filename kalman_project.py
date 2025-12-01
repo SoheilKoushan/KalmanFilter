@@ -84,7 +84,7 @@ def kf_matrices(cfg: KFConfig):
     A = np.array([
         [1, dt, 0, 0],
         [0, 1, 0, 0],
-        [0, 0, 0, dt],
+        [0, 0, 1, dt],
         [0, 0, 0, 1]
     ], dtype=float)
 
