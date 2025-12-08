@@ -138,7 +138,7 @@ class KalmanFilterCV2D:
         if np.any(np.isnan(z0)):
             self.x = np.array([0, 0, 0, 0], dtype=float)
         else:
-            self.x = np.array(z0[0], 0, z0[1], 0, dtype=float)
+            self.x = np.array([z0[0], 0, z0[1], 0], dtype=float)
         self.P = np.diag([sigma0_pos**2, sigma0_vel**2,
                           sigma0_pos**2, sigma0_vel**2])
 
@@ -203,7 +203,7 @@ cfg = SimConfig()
 t, X_true = simulate_truth(cfg)
 Z_meas, mask = simulate_measurements(X_true, cfg)
 
-kf_cfg = KFConfig(dt=cfg.df, q=cfg.q, sigma_meas=cfg.sigma_meas)
+kf_cfg = KFConfig(dt=cfg.dt, q=cfg.q, sigma_meas=cfg.sigma_meas)
 kf = KalmanFilterCV2D(kf_cfg)
 kf.init(Z_meas[0])
 
@@ -223,3 +223,88 @@ innov = np.array(innov) # (n, 2)
 # Baseline
 Z_ma = moving_average_positions(Z_meas, window=7)
 
+
+# -----------------------
+# 5) Metrics
+# -----------------------
+def rmse(a, b):
+    return np.sqrt(np.nanmean((a - b)**2))
+
+rmse_meas_x = rmse(Z_meas[:,0], X_true[:,0])
+rmse_meas_y = rmse(Z_meas[:,1], X_true[:,2])
+
+rmse_kf_x = rmse(X_est[:,0], X_true[:,0])
+rmse_kf_y = rmse(X_est[:,2], X_true[:,2])
+
+rmse_ma_x = rmse(Z_ma[:,0], X_true[:,0])
+rmse_ma_y = rmse(Z_ma[:,1], X_true[:,2])
+
+print("RMSE (position X): Meas = %.2f | MA = %.2f | KF = %.2f" % (rmse_meas_x, rmse_ma_x, rmse_kf_x))
+print("RMSE (position Y): Meas = %.2f | MA = %.2f | KF = %.2f" % (rmse_meas_y, rmse_ma_y, rmse_kf_y))
+
+
+# -----------------------
+# 6) NIS
+# -----------------------
+'''
+NIS: Normalized Innovation Squared
+The filter's assumption about noise match reality.
+NIS checks whether the actual innovations (errors) behave the way they should under those assumptions.
+If NIS is wrong that means your filter is lying to itself and your tuning is trash. 
+'''
+nis = []
+for yk, Sk in zip(innov, S_list):
+    if (yk is None) or (Sk is None) or np.any(np.isnan(yk)):
+        continue
+    val = yk.T @ np.linalg.inv(Sk) @ yk
+    nis.append(val)
+nis = np.array(nis)
+print("NIS mean (should be ~ dof=2): %.2f" % np.nanmean(nis))
+
+
+# -----------------------
+# 7) Plots
+# -----------------------
+plt.figure(figsize=(9,5))
+plt.title("2D Trajectory: Truth vs Noisy Measurements vs Kalman Estimate")
+plt.plot(X_true[:,0], X_true[:,2], label="Truth")
+plt.scatter(Z_meas[:,0], Z_meas[:,1], s=8, alpha=0.5, label="Measurements")
+plt.plot(X_est[:,0], X_est[:,2], label="Kalman")
+plt.legend()
+plt.xlabel("x")
+plt.ylabel("y")
+plt.tight_layout()
+plt.show()
+
+plt.figure(figsize=(9,5))
+plt.title("Position over Time (X)")
+plt.plot(t, X_true[:,0], label='Truth X')
+plt.plot(t, X_est[:,0], label='Kalman X')
+plt.scatter(t, Z_meas[:,0], s=8, alpha=0.5, label='Meas X')
+plt.plot(t, Z_ma[:,0], label="Moving Average X")
+plt.legend()
+plt.xlabel("t")
+plt.ylabel("x")
+plt.tight_layout()
+plt.show()
+
+plt.figure(figsize=(9,5))
+plt.title("Position over Time (Y)")
+plt.plot(t, X_true[:,2], label='Truth Y')
+plt.plot(t, X_est[:,2], label='Kalman Y')
+plt.scatter(t, Z_meas[:,1], s=8, alpha=0.5, label='Meas Y')
+plt.plot(t, Z_ma[:,1], label="Moving Average Y")
+plt.legend()
+plt.xlabel("t")
+plt.ylabel("y")
+plt.tight_layout()
+plt.show()
+
+plt.figure(figsize=(8,4))
+plt.title("NIS")
+plt.plot(nis, linewidth=1)
+plt.axhline(5.99, linestyle="--") # ~95% quantile for chi2 (df=2)
+plt.axhline(9.21, linestyle="--") # ~99% quantile
+plt.ylabel("NIS"); plt.xlabel("time (valid updates)")
+plt.tight_layout()
+plt.show()
