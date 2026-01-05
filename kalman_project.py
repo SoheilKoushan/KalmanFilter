@@ -308,3 +308,18 @@ plt.axhline(9.21, linestyle="--") # ~99% quantile
 plt.ylabel("NIS"); plt.xlabel("time (valid updates)")
 plt.tight_layout()
 plt.show()
+
+# visualisation for confidence bands
+sigma_x = np.sqrt([P[0,0] for P in P_est])
+
+plt.figure(figsize=(9,5))
+plt.title("truth versus 2-sigma confidence interval")
+
+plt.plot(t, X_true[:,0], label="truth_x", color="black")
+plt.plot(t, X_est[:,0], label="kalman_x", color="orange")
+plt.fill_between(t, X_est[:,0] - 2*sigma_x, X_est[:,0] + 2*sigma_x, color="green", alpha=0.3)
+plt.legend()
+plt.xlabel("t")
+plt.ylabel("x")
+plt.tight_layout()
+plt.show()
