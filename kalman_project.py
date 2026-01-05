@@ -49,8 +49,8 @@ def simulate_truth(cfg: SimConfig):
     t = np.arange(cfg.n_steps) * cfg.dt
 
     # smooth-ish 2D trajectory with gentle turns
-    x = 0.5 * t**2 + 10*np.sin(0.3*t)
-    y = 0.3 * t**2 + 8*np.cos(0.27*t + 0.8)
+    x = 5 * t + 2*np.sin(0.3*t)
+    y = 3 * t + 1*np.cos(0.27*t + 0.8)
 
     # take the numerical derivative of x wrt time, where time steps are evenly spaced by dt.
     vx = np.gradient(x, cfg.dt) 
